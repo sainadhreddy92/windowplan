@@ -26,11 +26,14 @@ export function sharedSlot(
 ): Interval | undefined {
   duration(length);
   let candidates = [interval(horizon)];
+  if (typeof resources === "string") {
+    throw new TypeError("resources must be an iterable of resource IDs, not a string");
+  }
   const ids = new Set(resources);
   if (ids.size === 0) throw new RangeError("at least one resource is required");
   for (const id of ids) {
     candidates = intersect(candidates, planner.available(id, horizon));
   }
-  const first = candidates.find(span => span.end - span.start > length);
+  const first = candidates.find(span => span.end - span.start >= length);
   return first && { start: first.start, end: first.start + length };
 }
