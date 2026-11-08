@@ -48,6 +48,8 @@ describe("sharedSlot", () => {
     test("repeated resource IDs do not change the answer", () => {
       const p = new Planner();
       assert.deepEqual(sharedSlot(p, ["a", "a"], bounds, 3), p.firstSlot("a", bounds, 3));
+      const example = examplePlanner();
+      assert.deepEqual(sharedSlot(example, ["warehouse", "a", "warehouse"], horizon, 12), {start: 40, end: 52});
     });
 
     test("accepts a one-pass iterable of resource IDs", () => {
@@ -107,6 +109,12 @@ describe("sharedSlot", () => {
     test("rejects a bare string instead of splitting it into characters", () => {
       // The letters of "warehouse" include "a", a real resource.
       assert.throws(() => sharedSlot(examplePlanner(), "warehouse", horizon, 12), TypeError);
+      assert.throws(() => sharedSlot(examplePlanner(), new String("warehouse") as any, horizon, 12), TypeError);
+    });
+
+    test("rejects null and undefined resource lists with a TypeError", () => {
+      assert.throws(() => sharedSlot(examplePlanner(), null as any, horizon, 12), TypeError);
+      assert.throws(() => sharedSlot(examplePlanner(), undefined as any, horizon, 12), TypeError);
     });
 
     test("rejects an empty resource set", () => {
@@ -148,8 +156,13 @@ describe("sharedSlot", () => {
     });
 
     test("agrees with a tick-by-tick search on random calendars", () => {
+      // 32-bit LCG via Math.imul: plain multiplication exceeds 2^53 and loses the low bits.
       let seed = 42;
-      const rand = (n: number) => (seed = (seed * 1103515245 + 12345) % 2147483648) % n;
+      const rand = (n: number) => {
+        seed = (Math.imul(seed, 1103515245) + 12345) & 0x7fffffff;
+        return (seed >>> 16) % n;
+      };
+      let multiEntryCalendars = 0;
       for (let run = 0; run < 2000; run++) {
         const p = new Planner();
         const ids = Array.from({length: 1 + rand(3)}, (_, i) => `r${i}`);
@@ -159,6 +172,7 @@ describe("sharedSlot", () => {
             const start = rand(40);
             return {start, end: start + 1 + rand(10)};
           });
+          if (entries.length >= 2) multiEntryCalendars++;
           calendars.set(id, entries);
           p.replace(id, entries);
         }
@@ -174,6 +188,8 @@ describe("sharedSlot", () => {
         }
         assert.deepEqual(sharedSlot(p, ids, h, length), expected, JSON.stringify({run, calendars: [...calendars], h, length}));
       }
+      // Guard against a degenerate generator silently producing only empty calendars.
+      assert.ok(multiEntryCalendars > 1000, `only ${multiEntryCalendars} calendars had 2+ entries`);
     });
   });
 });

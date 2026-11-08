@@ -24,11 +24,11 @@ export function sharedSlot(
   horizon: Interval,
   length: number,
 ): Interval | undefined {
+  if (resources == null || typeof resources === "string" || resources instanceof String) {
+    throw new TypeError("resources must be an iterable of resource IDs, not a single string");
+  }
   duration(length);
   let candidates = [interval(horizon)];
-  if (typeof resources === "string") {
-    throw new TypeError("resources must be an iterable of resource IDs, not a string");
-  }
   const ids = new Set(resources);
   if (ids.size === 0) throw new RangeError("at least one resource is required");
   for (const id of ids) {
