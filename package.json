@@ -1,0 +1,9 @@
+{
+  "name": "windowplan",
+  "version": "0.1.0",
+  "description": "Find job slots around resource maintenance",
+  "type": "module",
+  "engines": { "node": ">=24" },
+  "exports": "./src/index.ts",
+  "scripts": { "test": "node --test test/*.test.ts" }
+}
